@@ -1,44 +1,429 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO;
 
-namespace chatBoxClient
+
+namespace 秘密檔案
 {
-    public partial class Form2 : Form
+    public partial class Form1 : Form
     {
-        public Form2()
+        //--------------
+        //宣告全域變數
+        //--------------
+        string[] user ;//使用者名稱陣列
+        string[] password;//密碼陣列
+        string savedUser;//使用者名稱資料暫存(用於縮短程式碼
+        string savedPassword;//密碼資料暫存(用於縮短程式碼
+        int pos;//暫存陣列位置資訊
+        int loginUser = 0;//登入使用者序號
+        bool logging;//是否登入中
+        bool initializing = true;//初次初始化
+        //暫存各使用者資訊
+        string[] s = new string[5] { Properties.Settings.Default.slot1, Properties.Settings.Default.slot2, Properties.Settings.Default.slot3, Properties.Settings.Default.slot4, Properties.Settings.Default.slot5};
+        string[] userData;//暫存登入中使用者資料
+
+        public Form1()
         {
             InitializeComponent();
+            MaximizeBox = false;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
         }
-        private string IP;
-        private bool rem = false;
-        private void button1_Click(object sender, EventArgs e)
+        //--------
+        //初始化
+        //--------
+
+        private void Form1_Load(object sender, EventArgs e)
         {
-            IP = textBox1.Text;
-        }
-        public string getIP()
-        {
-            return IP;
+            MessageBox.Show("請先閱讀說明", "注意", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            creatFolder(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\system.{20D04FE0-3AEA-1069-A2D8-08002B30309D}");//初次使用本程式，產生隱藏目標資料夾 (騙不懂電腦的人XD)
+            savedUser = Properties.Settings.Default.user;//帳戶資料存入暫存
+            savedPassword = Properties.Settings.Default.password;//密碼資料存入暫存
+            Initialize();
+            
         }
 
-        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        public void Initialize()//初始化及儲存資料
         {
-            rem = checkBox1.Checked;
-        }
-        public bool getRem()
-        {
-            return rem;
+            pos = 0;//陣列位置序列號歸零
+
+            Properties.Settings.Default.slot1 = s[0];//------------------
+            Properties.Settings.Default.slot2 = s[1];//
+            Properties.Settings.Default.slot3 = s[2];//儲存各使用者資料
+            Properties.Settings.Default.slot4 = s[3];//
+            Properties.Settings.Default.slot5 = s[4];//------------------
+
+            Properties.Settings.Default.user = savedUser;//儲存帳戶資料
+            Properties.Settings.Default.password = savedPassword;//儲存密碼資料
+            Properties.Settings.Default.Save();//存檔
+
+            if (!initializing)//初始化登入使用者資料
+            {
+                userData = s[loginUser].Split(',');
+            }
+
+            user = Properties.Settings.Default.user.Split(',');//初始化帳戶資料
+            password = Properties.Settings.Default.password.Split(',');//初始化密碼資料
+            initializing = false;
         }
 
-        private void Form2_Load(object sender, EventArgs e)
+        //----------
+        //Function
+        //----------
+
+        public bool admin()
         {
-            textBox1.Text = Properties.Settings.Default.IP;
+            if (textBox1.Text == "admin" && textBox2.Text == "opbutton")//開發人員按鍵
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public void loginout(string type)
+        {
+            if (type == "login")
+            {
+                loginUser = pos;
+                Initialize();
+                button1.Text = "登出";
+
+                foreach (string Data in userData)
+                {
+                    if (Data == "")
+                    {
+                        continue;
+                    }
+                    listBox1.Items.Add(Data);
+                }
+
+                listBox1.Enabled = true;
+                button2.Enabled = false;
+                button3.Enabled = true;
+                button4.Enabled = false;
+                button8.Enabled = true;
+                button9.Enabled = true;
+                button10.Enabled = true;
+                textBox1.Enabled = false;
+                textBox2.Enabled = false;
+                logging = true;
+                return;
+            }
+            else
+            {
+                loginUser = 0;
+                Initialize();
+                loginUser = pos;
+                button1.Text = "登入";
+
+                listBox1.Items.Clear();
+                listBox1.Enabled = false;
+
+                button2.Enabled = true;
+                button3.Enabled = false;
+                button4.Enabled = true;
+                button8.Enabled = false;
+                button9.Enabled = false;
+                button10.Enabled = false;
+
+                textBox1.Enabled = true;
+                textBox2.Enabled = true;
+                textBox1.Text = null;
+                textBox2.Text = null;
+                textBox3.Text = null;
+
+                logging = false;
+            }
+        }
+
+        public void creatFolder(string hidePath)//創建資料夾
+        { 
+            Directory.CreateDirectory(hidePath);
+            DirectoryInfo diMyDir = new DirectoryInfo(hidePath);
+            diMyDir.Attributes = FileAttributes.Hidden;
+        }
+
+        public void moveFolder(string io)//移動資料夾
+        {
+            try
+            {
+
+                if (io == "in")
+                {
+                    DirectoryInfo targetDir = new DirectoryInfo(textBox3.Text);//設定目標資料夾
+                    DirectoryInfo[] targetDirChild = targetDir.GetDirectories("*.*",SearchOption.AllDirectories);
+                    FileInfo[] targetDirFile = targetDir.GetFiles("*.*",SearchOption.AllDirectories);
+                    if (!textBox3.Text.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.Desktop).Substring(0, 1)))
+                    {
+                        MessageBox.Show("資料夾路徑錯誤", "轉移失敗", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                    foreach (string UD in userData)
+                    {
+                        if (targetDir.Name == UD)
+                        {
+                            MessageBox.Show("資料夾名稱重複", "轉移失敗", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+
+                    if (targetDir.Exists)
+                    {
+                        foreach (DirectoryInfo tDC in targetDirChild)
+                        {
+                            tDC.Attributes = FileAttributes.Hidden;
+                        }
+                        foreach (FileInfo tDF in targetDirFile)
+                        {
+                            tDF.Attributes = FileAttributes.Hidden;
+                        }
+                        targetDir.Attributes = FileAttributes.Hidden;
+                        s[loginUser] += targetDir.Name + ",";
+                        Initialize();
+                        textBox3.Text = "";
+                        targetDir.MoveTo(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\system.{20D04FE0-3AEA-1069-A2D8-08002B30309D}\" + textBox1.Text + @"\" + targetDir.Name);
+                        listBox1.Items.Add(targetDir.Name);
+                    }
+                    else
+                    {
+                        MessageBox.Show("目標資料夾不存在", "轉移失敗", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+                else
+                if (io == "out")
+                {
+                    if (listBox1.Text != "")
+                    {
+                        DirectoryInfo selectDir = new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\system.{20D04FE0-3AEA-1069-A2D8-08002B30309D}\" + textBox1.Text + @"\" + listBox1.Text);
+                        DirectoryInfo[] selectDirChild = selectDir.GetDirectories("*.*", SearchOption.AllDirectories);
+                        FileInfo[] selectDirFile = selectDir.GetFiles("*.*", SearchOption.AllDirectories);
+                        DirectoryInfo desk = new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
+                        DirectoryInfo[] deskChild = desk.GetDirectories();
+
+                        foreach (DirectoryInfo DC in deskChild)
+                        {
+                            if (listBox1.Text == DC.Name)
+                            {
+                                MessageBox.Show("資料夾名稱重複", "轉移失敗", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+                        }
+
+                        foreach (DirectoryInfo sDC in selectDirChild)
+                        {
+                            sDC.Attributes = FileAttributes.Normal;
+                        }
+                        foreach (FileInfo sDF in selectDirFile)
+                        {
+                            sDF.Attributes = FileAttributes.Normal;
+                        }
+                        selectDir.Attributes = FileAttributes.Normal;
+                        s[loginUser] = s[loginUser].Replace(selectDir.Name + ",", "");
+                        Initialize();
+                        selectDir.MoveTo(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) + @"\" + listBox1.Text);
+                        listBox1.Items.Remove(selectDir.Name);
+                    }
+                    else
+                    {
+                        MessageBox.Show("未選擇目標資料夾", "轉移失敗", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            }
+            catch(IOException)
+            {
+                MessageBox.Show("請將欲隱藏之資料夾移至桌面", "轉移失敗", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        public void deleteAccount(int pos)
+        {
+
+            for (int i = pos; i < user.Length-1; i++)
+            {
+                s[i] = s[i + 1];
+            }
+            Properties.Settings.Default.slot1 = s[0];
+            Properties.Settings.Default.slot2 = s[1];
+            Properties.Settings.Default.slot3 = s[2];
+            Properties.Settings.Default.slot4 = s[3];
+            Properties.Settings.Default.slot5 = s[4];
+            Properties.Settings.Default.Save();
+        }
+
+        public bool checkPassword()
+        {
+            if (textBox1.Text == "" | textBox2.Text == "")
+            {
+                return false;
+            }
+            for (int t = 0; t < user.Length; t++)//檢測密碼正確
+            {
+                if (user[t] == textBox1.Text && user.Length >1)
+                {
+                    if (password[t] == textBox2.Text && user.Length > 1)
+                    {
+                        pos = t;
+                        loginUser = t;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        //----------------
+        //主程式(頁籤一)
+        //----------------
+
+        private void button1_Click(object sender, EventArgs e)//登入
+        {
+            if (admin()) { button4.Visible = true; return; }
+            if (!logging)
+            {
+                if (checkPassword())
+                {
+                    loginout("login");
+                }
+                else
+                {
+                    MessageBox.Show("密碼錯誤或無此帳號", "登入失敗", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            else
+            {
+                loginout("logout");
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)//註冊
+        {
+            foreach (string u in user)//檢測使用者名稱是否重複或空白
+            {
+                if (textBox1.Text == u | textBox1.Text == "" | textBox2.Text == "")
+                {
+                    MessageBox.Show("請檢察使用者名稱或密碼是否空白或已有相同使用者名稱", "資料錯誤", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                else if (user.Length == 6)
+                {
+                    MessageBox.Show("使用者已達上限", "資料錯誤", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+            var result = MessageBox.Show("帳戶名稱:"+textBox1.Text+"\r\n帳戶是否正確?", "確認資訊", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result == DialogResult.No) { return; }//確認資訊
+            savedUser += textBox1.Text + ",";
+            savedPassword += textBox2.Text + ",";
+            Initialize();
+
+            creatFolder(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\system.{20D04FE0-3AEA-1069-A2D8-08002B30309D}\" + textBox1.Text);
+            MessageBox.Show("創建完成", "創建帳號", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        
+        private void button3_Click(object sender, EventArgs e)//刪除
+        {
+            if (logging)//檢測
+            {
+                var result = MessageBox.Show("確定要刪除?","刪除帳號",MessageBoxButtons.YesNo,MessageBoxIcon.Warning);
+                if (result == DialogResult.No) { return; }
+
+                try
+                {
+                    DirectoryInfo diMyDir = new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\system.{20D04FE0-3AEA-1069-A2D8-08002B30309D}\" + textBox1.Text);
+                    DirectoryInfo[] diMyDirChild = diMyDir.GetDirectories("*.*", SearchOption.AllDirectories);
+                    FileInfo[] diMyDirFile = diMyDir.GetFiles("*.*", SearchOption.AllDirectories);
+                    diMyDir.Attributes = FileAttributes.Normal;
+                    foreach (DirectoryInfo DC in diMyDirChild)
+                    {
+                        DC.Attributes = FileAttributes.Normal;
+                    }
+                    foreach (FileInfo DFC in diMyDirFile)
+                    {
+                        DFC.Attributes = FileAttributes.Normal;
+                    }
+                    if (diMyDirChild.Length == 0)
+                    {
+                        diMyDir.Delete();
+                    }
+                    else
+                    {
+                        diMyDir.MoveTo(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) + @"\" + textBox1.Text);
+                    }
+                }
+                catch (IOException)
+                {
+                    MessageBox.Show("檔案夾內資料正在使用中或已有同名資料夾", "轉移失敗", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                deleteAccount(loginUser);
+                savedUser = savedUser.Remove(savedUser.IndexOf(user[pos]), user[pos].Length + 1);
+                savedPassword = savedPassword.Remove(savedPassword.IndexOf(password[pos]), password[pos].Length + 1);
+                Initialize();
+
+                loginout("logout");
+                MessageBox.Show("刪除完成", "刪除帳號",MessageBoxButtons.OK,MessageBoxIcon.Information);
+                return;
+            }
+            MessageBox.Show("密碼錯誤或無此帳號", "刪除失敗", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        
+        private void button4_Click(object sender, EventArgs e)
+        {
+            pos = 0;
+            for (int i = 0; i < user.Length-1; i++)
+            {
+                deleteAccount(0);
+            }
+            savedPassword = "";
+            savedUser = "";
+            Properties.Settings.Default.user = "";
+            Properties.Settings.Default.password = "";
+            Properties.Settings.Default.Save();
+            user = Properties.Settings.Default.user.Split(',');
+            password = Properties.Settings.Default.password.Split(',');
+            MessageBox.Show("資料清除完成", "刪除帳號資訊", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("目前支援使用者上限為5個\r\n目前使用者數為 : " + (user.Length - 1) + "\r\n\r\n使用者名稱必須為15字元以下\r\n密碼必須為20字元以下\r\n刪除完畢隱藏資料夾移至桌面\r\n請將欲隱藏之資料夾放置桌面", "說明", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            string msg = "";
+            for(int t = 1; t < user.Length; t++)
+            {
+                    msg += t + ". " + user[t-1] + "\r\n";
+            }
+            msg += "以上";
+            MessageBox.Show(msg, "UserList", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        //----------------
+        //主程式(頁籤二)
+        //----------------
+        
+        private void button8_Click(object sender, EventArgs e)
+        {
+            moveFolder("out");
+        }
+
+        private void button9_Click(object sender, EventArgs e)
+        {
+            if (textBox3.Text == "") { MessageBox.Show("目標資料夾不能為空白", "轉移失敗", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+            moveFolder("in");
+        }
+
+        private void button10_Click(object sender, EventArgs e)
+        {
+            FolderBrowserDialog path = new FolderBrowserDialog();
+            path.ShowDialog();
+            textBox3.Text = path.SelectedPath;
+        }
+
+        private void tabPage1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
